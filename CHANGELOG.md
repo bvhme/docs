@@ -11,9 +11,11 @@ and this project adheres to
 
 ## Added
 
-🔧(backend) add option to configure list of required OIDC claims #525
-🔧(helm) add option to disable default tls setting by @dominikkaminski #519
+- 🔧(backend) add option to configure list of required OIDC claims #525
+- 🔧(helm) add option to disable default tls setting by @dominikkaminski #519
 - ✨(frontend) export pdf docx front side #537
+- 📝(documentation) Documentation about self-hosted installation #530
+- ✨(helm) helm versioning #530
 
 ## Changed
 
