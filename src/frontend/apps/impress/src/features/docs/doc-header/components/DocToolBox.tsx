@@ -21,7 +21,7 @@ import {
 import { ModalVersion } from '@/features/docs/doc-versioning';
 import { useResponsiveStore } from '@/stores';
 
-import { ModalPDF } from './ModalExport';
+import { ModalExport } from './ModalExport';
 
 interface DocToolBoxProps {
   doc: Doc;
@@ -34,7 +34,7 @@ export const DocToolBox = ({ doc }: DocToolBoxProps) => {
   const { t } = useTranslation();
   const [isModalShareOpen, setIsModalShareOpen] = useState(false);
   const [isModalRemoveOpen, setIsModalRemoveOpen] = useState(false);
-  const [isModalPDFOpen, setIsModalPDFOpen] = useState(false);
+  const [isModalExportOpen, setIsModalExportOpen] = useState(false);
   const [isDropOpen, setIsDropOpen] = useState(false);
   const { setIsPanelOpen, setIsPanelTableContentOpen } = usePanelEditorStore();
   const [isModalVersionOpen, setIsModalVersionOpen] = useState(false);
@@ -137,7 +137,7 @@ export const DocToolBox = ({ doc }: DocToolBoxProps) => {
             </Button>
             <Button
               onClick={() => {
-                setIsModalPDFOpen(true);
+                setIsModalExportOpen(true);
                 setIsDropOpen(false);
               }}
               color="primary-text"
@@ -187,8 +187,8 @@ export const DocToolBox = ({ doc }: DocToolBoxProps) => {
       {isModalShareOpen && (
         <ModalShare onClose={() => setIsModalShareOpen(false)} doc={doc} />
       )}
-      {isModalPDFOpen && (
-        <ModalPDF onClose={() => setIsModalPDFOpen(false)} doc={doc} />
+      {isModalExportOpen && (
+        <ModalExport onClose={() => setIsModalExportOpen(false)} doc={doc} />
       )}
       {isModalRemoveOpen && (
         <ModalRemoveDoc onClose={() => setIsModalRemoveOpen(false)} doc={doc} />

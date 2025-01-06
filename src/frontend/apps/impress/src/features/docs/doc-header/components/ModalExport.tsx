@@ -1,7 +1,14 @@
 import {
+  DOCXExporter,
+  docxDefaultSchemaMappings,
+} from '@blocknote/xl-docx-exporter';
+import {
+  PDFExporter,
+  pdfDefaultSchemaMappings,
+} from '@blocknote/xl-pdf-exporter';
+import {
   Alert,
   Button,
-  Loader,
   Modal,
   ModalSize,
   Radio,
@@ -10,84 +17,88 @@ import {
   VariantType,
   useToastProvider,
 } from '@openfun/cunningham-react';
-import { useEffect, useMemo, useState } from 'react';
+import { pdf } from '@react-pdf/renderer';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Box, Text } from '@/components';
 import { useEditorStore } from '@/features/docs/doc-editor';
 import { Doc } from '@/features/docs/doc-management';
 
-import { useExport } from '../api/useExport';
 import { TemplatesOrdering, useTemplates } from '../api/useTemplates';
-import { adaptBlockNoteHTML, downloadFile } from '../utils';
+import { downloadFile } from '../utils';
 
-interface ModalPDFProps {
+interface ModalExportProps {
   onClose: () => void;
   doc: Doc;
 }
 
-export const ModalPDF = ({ onClose, doc }: ModalPDFProps) => {
+export const ModalExport = ({ onClose, doc }: ModalExportProps) => {
   const { t } = useTranslation();
   const { data: templates } = useTemplates({
     ordering: TemplatesOrdering.BY_CREATED_ON_DESC,
   });
   const { toast } = useToastProvider();
   const { editor } = useEditorStore();
-  const {
-    mutate: createExport,
-    data: documentGenerated,
-    isSuccess,
-    isPending,
-    error,
-  } = useExport();
-  const [templateIdSelected, setTemplateIdSelected] = useState<string>();
+  const [templateSelected, setTemplateSelected] = useState<string>('');
   const [format, setFormat] = useState<'pdf' | 'docx'>('pdf');
 
   const templateOptions = useMemo(() => {
-    if (!templates?.pages) {
-      return [];
-    }
-
-    const templateOptions = templates.pages
+    const templateOptions = (templates?.pages || [])
       .map((page) =>
         page.results.map((template) => ({
           label: template.title,
-          value: template.id,
+          value: template.code,
         })),
       )
       .flat();
 
-    if (templateOptions.length) {
-      setTemplateIdSelected(templateOptions[0].value);
-    }
+    templateOptions.unshift({
+      label: t('Empty template'),
+      value: '',
+    });
 
     return templateOptions;
-  }, [templates?.pages]);
+  }, [t, templates?.pages]);
 
-  useEffect(() => {
-    if (!error) {
+  async function onSubmit() {
+    if (!format) {
       return;
     }
 
-    toast(error.message, VariantType.ERROR);
-
-    onClose();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [error, t]);
-
-  useEffect(() => {
-    if (!documentGenerated || !isSuccess) {
+    if (!editor) {
+      toast(t('No editor found'), VariantType.ERROR);
       return;
     }
 
-    // normalize title
     const title = doc.title
       .toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/\s/g, '-');
 
-    downloadFile(documentGenerated, `${title}.${format}`);
+    const html = templateSelected;
+    let exportDocument = editor.document;
+    if (html) {
+      const blockTemplate = await editor.tryParseHTMLToBlocks(html);
+      exportDocument = [...blockTemplate, ...editor.document];
+    }
+
+    let blobExport;
+    if (format === 'pdf') {
+      const exporter = new PDFExporter(editor.schema, pdfDefaultSchemaMappings);
+      const pdfDocument = await exporter.toReactPDFDocument(exportDocument);
+      blobExport = await pdf(pdfDocument).toBlob();
+    } else {
+      const exporter = new DOCXExporter(
+        editor.schema,
+        docxDefaultSchemaMappings,
+      );
+
+      blobExport = await exporter.toBlob(exportDocument);
+    }
+
+    downloadFile(blobExport, `${title}.${format}`);
 
     toast(
       t('Your {{format}} was downloaded succesfully', {
@@ -97,28 +108,6 @@ export const ModalPDF = ({ onClose, doc }: ModalPDFProps) => {
     );
 
     onClose();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [documentGenerated, isSuccess, t]);
-
-  async function onSubmit() {
-    if (!templateIdSelected || !format) {
-      return;
-    }
-
-    if (!editor) {
-      toast(t('No editor found'), VariantType.ERROR);
-      return;
-    }
-
-    let body = await editor.blocksToFullHTML(editor.document);
-    body = adaptBlockNoteHTML(body);
-
-    createExport({
-      templateId: templateIdSelected,
-      body,
-      body_type: 'html',
-      format,
-    });
   }
 
   return (
@@ -143,7 +132,6 @@ export const ModalPDF = ({ onClose, doc }: ModalPDFProps) => {
           color="primary"
           fullWidth
           onClick={() => void onSubmit()}
-          disabled={isPending || !templateIdSelected}
         >
           {t('Download')}
         </Button>
@@ -182,9 +170,9 @@ export const ModalPDF = ({ onClose, doc }: ModalPDFProps) => {
           clearable={false}
           label={t('Template')}
           options={templateOptions}
-          value={templateIdSelected}
+          value={templateSelected}
           onChange={(options) =>
-            setTemplateIdSelected(options.target.value as string)
+            setTemplateSelected(options.target.value as string)
           }
         />
 
@@ -203,12 +191,6 @@ export const ModalPDF = ({ onClose, doc }: ModalPDFProps) => {
             onChange={(evt) => setFormat(evt.target.value as 'docx')}
           />
         </RadioGroup>
-
-        {isPending && (
-          <Box $align="center" $margin={{ top: 'big' }}>
-            <Loader />
-          </Box>
-        )}
       </Box>
     </Modal>
   );
