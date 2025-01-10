@@ -264,12 +264,16 @@ class ServerCreateDocumentSerializer(serializers.Serializer):
         """Create the document and associate it with the user or send an invitation."""
         language = validated_data.get("language", settings.LANGUAGE_CODE)
 
-        # Get the user based on the sub (unique identifier)
+        # Get the user on its sub (unique identifier). Default on email if allowed in settings
         try:
             user = models.User.objects.get(sub=validated_data["sub"])
-        except (models.User.DoesNotExist, KeyError):
-            user = None
+        except (models.User.DoesNotExist, KeyError) as err:
+            if not settings.OIDC_FALLBACK_TO_EMAIL_FOR_IDENTIFICATION:
+                raise serializers.ValidationError(
+                    {"sub": ["Could not find user with this sub."]}
+                ) from err
             email = validated_data["email"]
+            user = models.User.objects.filter(email=email).first()
         else:
             email = user.email
             language = user.language or language
@@ -279,7 +283,9 @@ class ServerCreateDocumentSerializer(serializers.Serializer):
                 validated_data["content"]
             )
         except ConversionError as err:
-            raise exceptions.APIException(detail="could not convert content") from err
+            raise serializers.ValidationError(
+                {"content": ["Could not convert content"]}
+            ) from err
 
         document = models.Document.objects.create(
             title=validated_data["title"],
@@ -302,7 +308,11 @@ class ServerCreateDocumentSerializer(serializers.Serializer):
                 role=models.RoleChoices.OWNER,
             )
 
-        # Notify the user about the newly created document
+        self._send_email_notification(document, validated_data, email, language)
+        return document
+
+    def _send_email_notification(self, document, validated_data, email, language):
+        """Notify the user about the newly created document."""
         subject = validated_data.get("subject") or _(
             "A new document was created on your behalf!"
         )
@@ -312,8 +322,6 @@ class ServerCreateDocumentSerializer(serializers.Serializer):
             "title": subject,
         }
         document.send_email(subject, [email], context, language)
-
-        return document
 
     def update(self, instance, validated_data):
         """
