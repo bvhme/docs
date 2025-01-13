@@ -4,13 +4,13 @@ import { BlockNoteView } from '@blocknote/mantine';
 import '@blocknote/mantine/style.css';
 import { useCreateBlockNote } from '@blocknote/react';
 import { HocuspocusProvider } from '@hocuspocus/provider';
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import * as Y from 'yjs';
 
 import { Box, TextErrors } from '@/components';
 import { useAuthStore } from '@/core/auth';
-import { Doc, Role, currentDocRole } from '@/features/docs/doc-management';
+import { Doc } from '@/features/docs/doc-management';
 
 import { useUploadFile } from '../hook';
 import { useHeadings } from '../hook/useHeadings';
@@ -22,12 +22,53 @@ import { BlockNoteToolbar } from './BlockNoteToolbar';
 
 const cssEditor = (readonly: boolean) => `
   &, & > .bn-container, & .ProseMirror {
-    height:100%
+    height:100%;
+    
+      .bn-side-menu[data-block-type=heading][data-level="1"] { 
+         height: 50px; 
+     } 
+     .bn-side-menu[data-block-type=heading][data-level="2"] { 
+       height: 43px; 
+     } 
+    .bn-side-menu[data-block-type=heading][data-level="3"] {
+      height: 35px;
+    }
+    h1 {
+      font-size: 1.875rem;
+    }
+    h2 {
+      font-size: 1.5rem;
+    }
+    h3 {
+      font-size: 1.25rem;
+    }
+    a {
+      color: var(--c--theme--colors--greyscale-500);
+      cursor: pointer;
+    }
+    .bn-block-group
+      .bn-block-group
+      .bn-block-outer:not([data-prev-depth-changed]):before {
+      border-left: none;
+    }
+  }
+  
+  .bn-editor {
+    
+    color: var(--c--theme--colors--greyscale-700);
+  }
+  .bn-block-outer:not(:first-child) {
+    &:has(h1) {
+      padding-top: 32px;
+    }
+    &:has(h2) {
+      padding-top: 24px;
+    }
+    &:has(h3) {
+      padding-top: 16px;
+    }
   };
-  & .bn-editor {
-    padding-right: 30px;
-    ${readonly && `padding-left: 30px;`}
-  };
+  
   & .bn-inline-content code {
     background-color: gainsboro;
     padding: 2px;
@@ -35,8 +76,7 @@ const cssEditor = (readonly: boolean) => `
   }
   @media screen and (width <= 560px) {
     & .bn-editor {
-      padding-left: 40px;
-      padding-right: 10px;
+      
       ${readonly && `padding-left: 10px;`}
     };
     .bn-side-menu[data-block-type=heading][data-level="1"] {
@@ -126,23 +166,6 @@ export const BlockNoteEditor = ({ doc, provider }: BlockNoteEditorProps) => {
     [collabName, lang, provider, uploadFile],
   );
   useHeadings(editor);
-
-  /**
-   * With the collaboration it gets complicated to create the initial block
-   * better to let Blocknote manage, then we update the block with the content.
-   */
-  useEffect(() => {
-    if (doc.content || currentDocRole(doc.abilities) !== Role.OWNER) {
-      return;
-    }
-
-    setTimeout(() => {
-      editor.updateBlock(editor.document[0], {
-        type: 'heading',
-        content: '',
-      });
-    }, 100);
-  }, [editor, doc.content, doc.abilities]);
 
   useEffect(() => {
     setEditor(editor);

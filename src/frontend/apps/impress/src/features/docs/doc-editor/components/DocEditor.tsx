@@ -1,35 +1,32 @@
-import { Alert, Loader, VariantType } from '@openfun/cunningham-react';
+import { Loader } from '@openfun/cunningham-react';
 import { useRouter } from 'next/router';
-import React, { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useEffect, useState } from 'react';
+import { css } from 'styled-components';
 import * as Y from 'yjs';
 
-import { Box, Card, Text, TextErrors } from '@/components';
+import { Box, Text, TextErrors } from '@/components';
 import { useCunninghamTheme } from '@/cunningham';
-import { DocHeader } from '@/features/docs/doc-header';
+import { DocHeader, DocVersionHeader } from '@/features/docs/doc-header/';
 import {
   Doc,
   base64ToBlocknoteXmlFragment,
   useProviderStore,
 } from '@/features/docs/doc-management';
+import { TableContent } from '@/features/docs/doc-table-content/';
 import { Versions, useDocVersion } from '@/features/docs/doc-versioning/';
 import { useResponsiveStore } from '@/stores';
 
 import { BlockNoteEditor, BlockNoteEditorVersion } from './BlockNoteEditor';
-import { IconOpenPanelEditor, PanelEditor } from './PanelEditor';
 
 interface DocEditorProps {
   doc: Doc;
+  versionId?: Versions['version_id'];
 }
 
-export const DocEditor = ({ doc }: DocEditorProps) => {
-  const {
-    query: { versionId },
-  } = useRouter();
-  const { t } = useTranslation();
-  const { isMobile } = useResponsiveStore();
+export const DocEditor = ({ doc, versionId }: DocEditorProps) => {
+  const { isDesktop } = useResponsiveStore();
 
-  const isVersion = versionId && typeof versionId === 'string';
+  const isVersion = !!versionId && typeof versionId === 'string';
 
   const { colorsTokens } = useCunninghamTheme();
 
@@ -41,43 +38,41 @@ export const DocEditor = ({ doc }: DocEditorProps) => {
 
   return (
     <>
-      <DocHeader doc={doc} />
-      {!doc.abilities.partial_update && (
-        <Box $margin={{ all: 'small', top: 'none' }}>
-          <Alert type={VariantType.WARNING}>
-            {t(`Read only, you cannot edit this document.`)}
-          </Alert>
+      {isDesktop && !isVersion && (
+        <Box
+          $position="absolute"
+          $css={css`
+            top: 72px;
+            right: 20px;
+          `}
+        >
+          <TableContent />
         </Box>
       )}
-      {isVersion && (
-        <Box $margin={{ all: 'small', top: 'none' }}>
-          <Alert type={VariantType.WARNING}>
-            {t(`Read only, you cannot edit document versions.`)}
-          </Alert>
+      <Box $maxWidth="868px" $width="100%" $height="100%">
+        <Box $padding={{ horizontal: isDesktop ? '54px' : 'base' }}>
+          {isVersion ? (
+            <DocVersionHeader title={doc.title} />
+          ) : (
+            <DocHeader doc={doc} />
+          )}
         </Box>
-      )}
-      <Box
-        $background={colorsTokens()['primary-bg']}
-        $height="100%"
-        $direction="row"
-        $margin={{ all: isMobile ? 'tiny' : 'small', top: 'none' }}
-        $css="overflow-x: clip;"
-        $position="relative"
-      >
-        <Card
-          $padding={isMobile ? 'small' : 'big'}
-          $css="flex:1;"
-          $overflow="auto"
+
+        <Box
+          $background={colorsTokens()['primary-bg']}
+          $direction="row"
+          $width="100%"
+          $css="overflow-x: clip; flex: 1;"
           $position="relative"
         >
-          {isVersion ? (
-            <DocVersionEditor docId={doc.id} versionId={versionId} />
-          ) : (
-            <BlockNoteEditor doc={doc} provider={provider} />
-          )}
-          {!isMobile && <IconOpenPanelEditor />}
-        </Card>
-        <PanelEditor doc={doc} />
+          <Box $css="flex:1;" $overflow="auto" $position="relative">
+            {isVersion ? (
+              <DocVersionEditor docId={doc.id} versionId={versionId} />
+            ) : (
+              <BlockNoteEditor doc={doc} provider={provider} />
+            )}
+          </Box>
+        </Box>
       </Box>
     </>
   );

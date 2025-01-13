@@ -11,13 +11,23 @@ and this project adheres to
 
 ## Added
 
-🔧(backend) add option to configure list of required OIDC claims #525
-🔧(helm) add option to disable default tls setting by @dominikkaminski #519
+- 🔧(backend) add option to configure list of essential OIDC claims #525 & #531
+- 🔧(helm) add option to disable default tls setting by @dominikkaminski #519
+- 💄(frontend) Add left panel #420
+- 💄(frontend) add filtering to left panel #475
+- ✨(frontend) new share modal ui #489
+- ✨(frontend) add favorite feature #515
 
 ## Changed
 
 - 🏗️(yjs-server) organize yjs server #528
 - ♻️(frontend) better separation collaboration process #528
+- 💄(frontend) updating the header and leftpanel for responsive #421
+- 💄(frontend) update DocsGrid component #431
+- 💄(frontend) update DocsGridOptions component #432
+- 💄(frontend) update DocHeader ui #446
+- 💄(frontend) update doc versioning ui #463
+- 💄(frontend) update doc summary ui #473
 
 
 ## [1.10.0] - 2024-12-17
@@ -35,6 +45,11 @@ and this project adheres to
 ## Fixed
 
 - ⚡️(e2e) reduce flakiness on e2e tests #511
+
+
+## Fixed
+- 🐛(frontend) update doc editor height #481
+- 💄(frontend) add doc search #485
 
 
 ## [1.9.0] - 2024-12-11

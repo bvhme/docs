@@ -6,6 +6,7 @@ import {
   mockedAccesses,
   mockedDocument,
   mockedInvitations,
+  verifyDocName,
 } from './common';
 
 test.beforeEach(async ({ page }) => {
@@ -59,84 +60,31 @@ test.describe('Doc Header', () => {
     const card = page.getByLabel(
       'It is the card information about the document.',
     );
-    await expect(card.locator('a').getByText('home')).toBeVisible();
-    await expect(card.locator('h2').getByText('Mocked document')).toBeVisible();
-    await expect(card.getByText('Public')).toBeVisible();
-    await expect(
-      card.getByText('Created at 09/01/2021, 11:00 AM'),
-    ).toBeVisible();
-    await expect(card.getByText('Your role: Owner')).toBeVisible();
+
+    const docTitle = card.getByRole('textbox', { name: 'doc title input' });
+    await expect(docTitle).toBeVisible();
+
+    await expect(card.getByText('Public document')).toBeVisible();
+
+    await expect(card.getByText('Owner ·')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Share' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'download' })).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Open the document options' }),
+    ).toBeVisible();
   });
 
   test('it updates the title doc', async ({ page, browserName }) => {
-    const [randomDoc] = await createDoc(page, 'doc-update', browserName, 1);
-
-    await page.getByRole('heading', { name: randomDoc }).fill(' ');
-    await page.getByText('Created at').click();
-
-    await expect(
-      page.getByRole('heading', { name: 'Untitled document' }),
-    ).toBeVisible();
-  });
-
-  test('it updates the title doc from editor heading', async ({ page }) => {
-    await page
-      .getByRole('button', {
-        name: 'Create a new document',
-      })
-      .click();
-
-    const docHeader = page.getByLabel(
-      'It is the card information about the document.',
-    );
-
-    await expect(
-      docHeader.getByRole('heading', { name: 'Untitled document', level: 2 }),
-    ).toBeVisible();
-
-    const editor = page.locator('.ProseMirror');
-
-    await editor.locator('h1').click();
-    await page.keyboard.type('Hello World', { delay: 100 });
-
-    await expect(
-      docHeader.getByRole('heading', { name: 'Hello World', level: 2 }),
-    ).toBeVisible();
-
-    await expect(
-      page.getByText('Document title updated successfully'),
-    ).toBeVisible();
-
-    await docHeader
-      .getByRole('heading', { name: 'Hello World', level: 2 })
-      .fill('Top World');
-
-    await editor.locator('h1').fill('Super World');
-
-    await expect(
-      docHeader.getByRole('heading', { name: 'Top World', level: 2 }),
-    ).toBeVisible();
-
-    await editor.locator('h1').fill('');
-
-    // eslint-disable-next-line playwright/no-wait-for-timeout
-    await page.waitForTimeout(500);
-
-    await docHeader
-      .getByRole('heading', { name: 'Top World', level: 2 })
-      .fill(' ');
-
-    await page.getByText('Created at').click();
-
-    await expect(
-      docHeader.getByRole('heading', { name: 'Untitled  document', level: 2 }),
-    ).toBeVisible();
+    await createDoc(page, 'doc-update', browserName, 1);
+    const docTitle = page.getByRole('textbox', { name: 'doc title input' });
+    await expect(docTitle).toBeVisible();
+    await docTitle.fill('Hello World');
+    await docTitle.blur();
+    await verifyDocName(page, 'Hello World');
   });
 
   test('it deletes the doc', async ({ page, browserName }) => {
     const [randomDoc] = await createDoc(page, 'doc-delete', browserName, 1);
-    await expect(page.locator('h2').getByText(randomDoc)).toBeVisible();
 
     await page.getByLabel('Open the document options').click();
     await page
@@ -146,7 +94,13 @@ test.describe('Doc Header', () => {
       .click();
 
     await expect(
-      page.locator('h2').getByText(`Deleting the document "${randomDoc}"`),
+      page.getByRole('heading', { name: 'Delete a doc' }),
+    ).toBeVisible();
+
+    await expect(
+      page.getByText(
+        `Are you sure you want to delete the document "${randomDoc}"?`,
+      ),
     ).toBeVisible();
 
     await page
@@ -159,9 +113,7 @@ test.describe('Doc Header', () => {
       page.getByText('The document has been deleted.'),
     ).toBeVisible();
 
-    await expect(
-      page.getByRole('button', { name: 'Create a new document' }),
-    ).toBeVisible();
+    await expect(page.getByRole('button', { name: 'New do' })).toBeVisible();
 
     const row = page
       .getByLabel('Datagrid of the documents page 1')
@@ -195,16 +147,13 @@ test.describe('Doc Header', () => {
 
     await goToGridDoc(page);
 
-    await expect(
-      page.locator('h2').getByText('Mocked document'),
-    ).toHaveAttribute('contenteditable');
+    await expect(page.getByRole('button', { name: 'download' })).toBeVisible();
 
     await page.getByLabel('Open the document options').click();
 
-    await expect(page.getByRole('button', { name: 'Export' })).toBeVisible();
     await expect(
       page.getByRole('button', { name: 'Delete document' }),
-    ).toBeHidden();
+    ).toBeDisabled();
 
     // Click somewhere else to close the options
     await page.click('body', { position: { x: 0, y: 0 } });
@@ -212,34 +161,40 @@ test.describe('Doc Header', () => {
     await page.getByRole('button', { name: 'Share' }).click();
 
     const shareModal = page.getByLabel('Share modal');
+    await expect(shareModal).toBeVisible();
+    await expect(page.getByText('Share the document')).toBeVisible();
 
-    await expect(
-      shareModal.getByRole('combobox', {
-        name: 'Visibility',
-      }),
-    ).not.toHaveAttribute('disabled');
-    await expect(shareModal.getByText('Search by email')).toBeVisible();
+    await expect(page.getByPlaceholder('Type a name or email')).toBeVisible();
 
     const invitationCard = shareModal.getByLabel('List invitation card');
+    await expect(invitationCard).toBeVisible();
     await expect(
-      invitationCard.getByText('test@invitation.test'),
+      invitationCard.getByText('test@invitation.test').first(),
     ).toBeVisible();
+    await expect(invitationCard.getByLabel('doc-role-dropdown')).toBeVisible();
+
+    await invitationCard.getByRole('button', { name: 'more_horiz' }).click();
+
     await expect(
-      invitationCard.getByRole('combobox', { name: 'Role' }),
-    ).toBeEnabled();
-    await expect(
-      invitationCard.getByRole('button', {
+      page.getByRole('button', {
         name: 'delete',
       }),
     ).toBeEnabled();
+    await invitationCard.click();
 
     const memberCard = shareModal.getByLabel('List members card');
-    await expect(memberCard.getByText('test@accesses.test')).toBeVisible();
+    await expect(memberCard).toBeVisible();
     await expect(
-      memberCard.getByRole('combobox', { name: 'Role' }),
-    ).toBeEnabled();
+      memberCard.getByText('test@accesses.test').first(),
+    ).toBeVisible();
+    await expect(memberCard.getByLabel('doc-role-dropdown')).toBeVisible();
     await expect(
-      memberCard.getByRole('button', {
+      memberCard.getByRole('button', { name: 'more_horiz' }),
+    ).toBeVisible();
+    await memberCard.getByRole('button', { name: 'more_horiz' }).click();
+
+    await expect(
+      page.getByRole('button', {
         name: 'delete',
       }),
     ).toBeEnabled();
@@ -273,16 +228,12 @@ test.describe('Doc Header', () => {
 
     await goToGridDoc(page);
 
-    await expect(
-      page.locator('h2').getByText('Mocked document'),
-    ).toHaveAttribute('contenteditable');
-
+    await expect(page.getByRole('button', { name: 'download' })).toBeVisible();
     await page.getByLabel('Open the document options').click();
 
-    await expect(page.getByRole('button', { name: 'Export' })).toBeVisible();
     await expect(
       page.getByRole('button', { name: 'Delete document' }),
-    ).toBeHidden();
+    ).toBeDisabled();
 
     // Click somewhere else to close the options
     await page.click('body', { position: { x: 0, y: 0 } });
@@ -290,36 +241,24 @@ test.describe('Doc Header', () => {
     await page.getByRole('button', { name: 'Share' }).click();
 
     const shareModal = page.getByLabel('Share modal');
+    await expect(page.getByText('Share the document')).toBeVisible();
 
-    await expect(
-      shareModal.getByRole('combobox', {
-        name: 'Visibility',
-      }),
-    ).toHaveAttribute('disabled');
-    await expect(shareModal.getByText('Search by email')).toBeHidden();
+    await expect(page.getByPlaceholder('Type a name or email')).toBeHidden();
 
     const invitationCard = shareModal.getByLabel('List invitation card');
     await expect(
-      invitationCard.getByText('test@invitation.test'),
+      invitationCard.getByText('test@invitation.test').first(),
     ).toBeVisible();
+    await expect(invitationCard.getByLabel('doc-role-text')).toBeVisible();
     await expect(
-      invitationCard.getByRole('combobox', { name: 'Role' }),
-    ).toHaveAttribute('disabled');
-    await expect(
-      invitationCard.getByRole('button', {
-        name: 'delete',
-      }),
+      invitationCard.getByRole('button', { name: 'more_horiz' }),
     ).toBeHidden();
 
     const memberCard = shareModal.getByLabel('List members card');
     await expect(memberCard.getByText('test@accesses.test')).toBeVisible();
+    await expect(memberCard.getByLabel('doc-role-text')).toBeVisible();
     await expect(
-      memberCard.getByRole('combobox', { name: 'Role' }),
-    ).toHaveAttribute('disabled');
-    await expect(
-      memberCard.getByRole('button', {
-        name: 'delete',
-      }),
+      memberCard.getByRole('button', { name: 'more_horiz' }),
     ).toBeHidden();
   });
 
@@ -351,16 +290,12 @@ test.describe('Doc Header', () => {
 
     await goToGridDoc(page);
 
-    await expect(
-      page.locator('h2').getByText('Mocked document'),
-    ).not.toHaveAttribute('contenteditable');
-
+    await expect(page.getByRole('button', { name: 'download' })).toBeVisible();
     await page.getByLabel('Open the document options').click();
 
-    await expect(page.getByRole('button', { name: 'Export' })).toBeVisible();
     await expect(
       page.getByRole('button', { name: 'Delete document' }),
-    ).toBeHidden();
+    ).toBeDisabled();
 
     // Click somewhere else to close the options
     await page.click('body', { position: { x: 0, y: 0 } });
@@ -368,36 +303,24 @@ test.describe('Doc Header', () => {
     await page.getByRole('button', { name: 'Share' }).click();
 
     const shareModal = page.getByLabel('Share modal');
+    await expect(page.getByText('Share the document')).toBeVisible();
 
-    await expect(
-      shareModal.getByRole('combobox', {
-        name: 'Visibility',
-      }),
-    ).toHaveAttribute('disabled');
-    await expect(shareModal.getByText('Search by email')).toBeHidden();
+    await expect(page.getByPlaceholder('Type a name or email')).toBeHidden();
 
     const invitationCard = shareModal.getByLabel('List invitation card');
     await expect(
-      invitationCard.getByText('test@invitation.test'),
+      invitationCard.getByText('test@invitation.test').first(),
     ).toBeVisible();
+    await expect(invitationCard.getByLabel('doc-role-text')).toBeVisible();
     await expect(
-      invitationCard.getByRole('combobox', { name: 'Role' }),
-    ).toHaveAttribute('disabled');
-    await expect(
-      invitationCard.getByRole('button', {
-        name: 'delete',
-      }),
+      invitationCard.getByRole('button', { name: 'more_horiz' }),
     ).toBeHidden();
 
     const memberCard = shareModal.getByLabel('List members card');
     await expect(memberCard.getByText('test@accesses.test')).toBeVisible();
+    await expect(memberCard.getByLabel('doc-role-text')).toBeVisible();
     await expect(
-      memberCard.getByRole('combobox', { name: 'Role' }),
-    ).toHaveAttribute('disabled');
-    await expect(
-      memberCard.getByRole('button', {
-        name: 'delete',
-      }),
+      memberCard.getByRole('button', { name: 'more_horiz' }),
     ).toBeHidden();
   });
 
@@ -414,7 +337,7 @@ test.describe('Doc Header', () => {
     // create page and navigate to it
     await page
       .getByRole('button', {
-        name: 'Create a new document',
+        name: 'New doc',
       })
       .click();
 
@@ -449,7 +372,7 @@ test.describe('Doc Header', () => {
     // create page and navigate to it
     await page
       .getByRole('button', {
-        name: 'Create a new document',
+        name: 'New doc',
       })
       .click();
 
@@ -499,6 +422,7 @@ test.describe('Documents Header mobile', () => {
 
     await goToGridDoc(page);
 
+    await page.getByLabel('Open the document options').click();
     await page.getByRole('button', { name: 'Share' }).click();
 
     await expect(page.getByLabel('Share modal')).toBeVisible();

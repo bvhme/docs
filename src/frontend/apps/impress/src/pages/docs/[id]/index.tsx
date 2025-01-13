@@ -4,8 +4,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 
-import { Box, Text } from '@/components';
-import { TextErrors } from '@/components/TextErrors';
+import { Box, Text, TextErrors } from '@/components';
 import { useAuthStore } from '@/core/auth';
 import { DocEditor } from '@/features/docs/doc-editor';
 import {
@@ -33,6 +32,7 @@ export function DocLayout() {
       <Head>
         <meta name="robots" content="noindex" />
       </Head>
+
       <MainLayout withoutFooter>
         <DocPage id={id} />
       </MainLayout>

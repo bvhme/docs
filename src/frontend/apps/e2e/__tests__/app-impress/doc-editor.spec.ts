@@ -2,7 +2,12 @@ import path from 'path';
 
 import { expect, test } from '@playwright/test';
 
-import { createDoc, goToGridDoc, mockedDocument } from './common';
+import {
+  createDoc,
+  goToGridDoc,
+  mockedDocument,
+  verifyDocName,
+} from './common';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
@@ -98,7 +103,7 @@ test.describe('Doc Editor', () => {
     });
 
     const randomDoc = await createDoc(page, 'doc-editor', browserName, 1);
-    await expect(page.locator('h2').getByText(randomDoc[0])).toBeVisible();
+    await verifyDocName(page, randomDoc[0]);
 
     let webSocket = await webSocketPromise;
     expect(webSocket.url()).toContain(
@@ -116,17 +121,15 @@ test.describe('Doc Editor', () => {
 
     await page.getByRole('button', { name: 'Share' }).click();
 
-    const selectVisibility = page.getByRole('combobox', {
-      name: 'Visibility',
-    });
+    const selectVisibility = page.getByLabel('Visibility', { exact: true });
 
     // When the visibility is changed, the ws should closed the connection (backend signal)
     const wsClosePromise = webSocket.waitForEvent('close');
 
     await selectVisibility.click();
     await page
-      .getByRole('option', {
-        name: 'Authenticated',
+      .getByRole('button', {
+        name: 'Connected',
       })
       .click();
 
@@ -153,7 +156,7 @@ test.describe('Doc Editor', () => {
   }) => {
     const randomDoc = await createDoc(page, 'doc-markdown', browserName, 1);
 
-    await expect(page.locator('h2').getByText(randomDoc[0])).toBeVisible();
+    await verifyDocName(page, randomDoc[0]);
 
     const editor = page.locator('.ProseMirror');
     await editor.click();
@@ -178,7 +181,7 @@ test.describe('Doc Editor', () => {
   }) => {
     // Check the first doc
     const [firstDoc] = await createDoc(page, 'doc-switch-1', browserName, 1);
-    await expect(page.locator('h2').getByText(firstDoc)).toBeVisible();
+    await verifyDocName(page, firstDoc);
 
     const editor = page.locator('.ProseMirror');
     await editor.click();
@@ -187,7 +190,8 @@ test.describe('Doc Editor', () => {
 
     // Check the second doc
     const [secondDoc] = await createDoc(page, 'doc-switch-2', browserName, 1);
-    await expect(page.locator('h2').getByText(secondDoc)).toBeVisible();
+    await verifyDocName(page, secondDoc);
+
     await expect(editor.getByText('Hello World Doc 1')).toBeHidden();
     await editor.click();
     await editor.fill('Hello World Doc 2');
@@ -197,7 +201,7 @@ test.describe('Doc Editor', () => {
     await goToGridDoc(page, {
       title: firstDoc,
     });
-    await expect(page.locator('h2').getByText(firstDoc)).toBeVisible();
+    await verifyDocName(page, firstDoc);
     await expect(editor.getByText('Hello World Doc 2')).toBeHidden();
     await expect(editor.getByText('Hello World Doc 1')).toBeVisible();
   });
@@ -208,7 +212,7 @@ test.describe('Doc Editor', () => {
   }) => {
     // Check the first doc
     const [doc] = await createDoc(page, 'doc-saves-change', browserName, 1);
-    await expect(page.locator('h2').getByText(doc)).toBeVisible();
+    await verifyDocName(page, doc);
 
     const editor = page.locator('.ProseMirror');
     await editor.click();
@@ -219,7 +223,7 @@ test.describe('Doc Editor', () => {
       nthRow: 2,
     });
 
-    await expect(page.locator('h2').getByText(secondDoc)).toBeVisible();
+    await verifyDocName(page, secondDoc);
 
     await goToGridDoc(page, {
       title: doc,
@@ -233,8 +237,9 @@ test.describe('Doc Editor', () => {
     test.skip(browserName === 'webkit', 'This test is very flaky with webkit');
 
     // Check the first doc
-    const [doc] = await createDoc(page, 'doc-quit-1', browserName, 1);
-    await expect(page.locator('h2').getByText(doc)).toBeVisible();
+    const doc = await goToGridDoc(page);
+
+    await verifyDocName(page, doc);
 
     const editor = page.locator('.ProseMirror');
     await editor.click();
@@ -267,9 +272,10 @@ test.describe('Doc Editor', () => {
 
     await goToGridDoc(page);
 
-    await expect(
-      page.getByText('Read only, you cannot edit this document.'),
-    ).toBeVisible();
+    const card = page.getByLabel('It is the card information');
+    await expect(card).toBeVisible();
+
+    await expect(card.getByText('Reader')).toBeVisible();
   });
 
   test('it adds an image to the doc editor', async ({ page, browserName }) => {

@@ -1,14 +1,17 @@
-import { Fragment } from 'react';
+import { DateTime } from 'luxon';
 import { useTranslation } from 'react-i18next';
 import { css } from 'styled-components';
 
-import { Box, Card, StyledLink, Text } from '@/components';
+import { Box, HorizontalSeparator, Icon, Text } from '@/components';
 import { useCunninghamTheme } from '@/cunningham';
-import { Doc, currentDocRole, useTrans } from '@/features/docs/doc-management';
-import { useDate } from '@/hook';
+import {
+  Doc,
+  LinkReach,
+  currentDocRole,
+  useTrans,
+} from '@/features/docs/doc-management';
 import { useResponsiveStore } from '@/stores';
 
-import { DocTagPublic } from './DocTagPublic';
 import { DocTitle } from './DocTitle';
 import { DocToolBox } from './DocToolBox';
 
@@ -17,89 +20,86 @@ interface DocHeaderProps {
 }
 
 export const DocHeader = ({ doc }: DocHeaderProps) => {
-  const { colorsTokens } = useCunninghamTheme();
+  const { colorsTokens, spacingsTokens } = useCunninghamTheme();
+  const { isDesktop } = useResponsiveStore();
+  const spacings = spacingsTokens();
+  const colors = colorsTokens();
+
   const { t } = useTranslation();
-  const { formatDate } = useDate();
+  const docIsPublic = doc.link_reach === LinkReach.PUBLIC;
+
   const { transRole } = useTrans();
-  const { isMobile, isSmallMobile } = useResponsiveStore();
 
   return (
     <>
-      <Card
-        $margin={isMobile ? 'tiny' : 'small'}
+      <Box
+        $width="100%"
+        $padding={{ top: isDesktop ? '4xl' : 'md' }}
+        $gap={spacings['base']}
         aria-label={t('It is the card information about the document.')}
       >
-        <Box
-          $padding={isMobile ? 'tiny' : 'small'}
-          $direction="row"
-          $align="center"
-        >
-          <StyledLink href="/">
-            <Text
-              $isMaterialIcon
-              $theme="primary"
-              $variation="600"
-              $size="2rem"
-              $css={css`
-                &:hover {
-                  background-color: ${colorsTokens()['primary-100']};
-                }
-              `}
-              $hasTransition
-              $radius="5px"
-              $padding="tiny"
-            >
-              home
-            </Text>
-          </StyledLink>
+        {docIsPublic && (
           <Box
-            $width="1px"
-            $height="70%"
-            $background={colorsTokens()['greyscale-100']}
-            $margin={{ horizontal: 'tiny' }}
-          />
+            aria-label={t('Public document')}
+            $color={colors['primary-800']}
+            $background={colors['primary-100']}
+            $radius={spacings['3xs']}
+            $direction="row"
+            $padding="xs"
+            $flex={1}
+            $align="center"
+            $gap={spacings['3xs']}
+            $css={css`
+              border: 1px solid var(--c--theme--colors--primary-300, #e3e3fd);
+            `}
+          >
+            <Icon
+              $theme="primary"
+              $variation="800"
+              data-testid="public-icon"
+              iconName="public"
+            />
+            <Text $theme="primary" $variation="800">
+              {t('Public document')}
+            </Text>
+          </Box>
+        )}
+        <Box $direction="row" $align="center" $width="100%">
           <Box
             $direction="row"
             $justify="space-between"
             $css="flex:1;"
             $gap="0.5rem 1rem"
-            $wrap="wrap"
             $align="center"
           >
-            <DocTitle doc={doc} />
+            <Box $gap={spacings['3xs']}>
+              <DocTitle doc={doc} />
+
+              <Box $direction="row">
+                {isDesktop && (
+                  <>
+                    <Text $variation="600" $size="s" $weight="bold">
+                      {transRole(currentDocRole(doc.abilities))}&nbsp;·&nbsp;
+                    </Text>
+                    <Text $variation="600" $size="s">
+                      {t('Last update: {{update}}', {
+                        update: DateTime.fromISO(doc.updated_at).toRelative(),
+                      })}
+                    </Text>
+                  </>
+                )}
+                {!isDesktop && (
+                  <Text $variation="400" $size="s">
+                    {DateTime.fromISO(doc.updated_at).toRelative()}
+                  </Text>
+                )}
+              </Box>
+            </Box>
             <DocToolBox doc={doc} />
           </Box>
         </Box>
-        <Box
-          $direction={isSmallMobile ? 'column' : 'row'}
-          $align={isSmallMobile ? 'start' : 'center'}
-          $css="border-top:1px solid #eee"
-          $padding={{
-            horizontal: isMobile ? 'tiny' : 'big',
-            vertical: 'tiny',
-          }}
-          $gap="0.5rem 2rem"
-          $justify="space-between"
-          $wrap="wrap"
-          $position="relative"
-        >
-          <Box
-            $direction={isSmallMobile ? 'column' : 'row'}
-            $align={isSmallMobile ? 'start' : 'center'}
-            $gap="0.5rem 2rem"
-            $wrap="wrap"
-          >
-            <DocTagPublic doc={doc} />
-            <Text $size="s" $display="inline">
-              {t('Created at')} <strong>{formatDate(doc.created_at)}</strong>
-            </Text>
-          </Box>
-          <Text $size="s" $display="inline">
-            {t('Your role:')}{' '}
-            <strong>{transRole(currentDocRole(doc.abilities))}</strong>
-          </Text>
-        </Box>
-      </Card>
+        <HorizontalSeparator $withPadding={true} />
+      </Box>
     </>
   );
 };

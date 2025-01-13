@@ -5,6 +5,8 @@ import { tokens } from './cunningham-tokens';
 
 type Tokens = typeof tokens.themes.default & Partial<typeof tokens.themes.dsfr>;
 type ColorsTokens = Tokens['theme']['colors'];
+type FontSizesTokens = Tokens['theme']['font']['sizes'];
+type SpacingsTokens = Tokens['theme']['spacings'];
 type ComponentTokens = Tokens['components'];
 export type Theme = keyof typeof tokens.themes;
 
@@ -13,6 +15,8 @@ interface AuthStore {
   setTheme: (theme: Theme) => void;
   themeTokens: () => Partial<Tokens['theme']>;
   colorsTokens: () => Partial<ColorsTokens>;
+  fontSizesTokens: () => Partial<FontSizesTokens>;
+  spacingsTokens: () => Partial<SpacingsTokens>;
   componentTokens: () => ComponentTokens;
 }
 
@@ -28,6 +32,8 @@ export const useCunninghamTheme = create<AuthStore>((set, get) => {
     themeTokens: () => currentTheme().theme,
     colorsTokens: () => currentTheme().theme.colors,
     componentTokens: () => currentTheme().components,
+    spacingsTokens: () => currentTheme().theme.spacings,
+    fontSizesTokens: () => currentTheme().theme.font.sizes,
     setTheme: (theme: Theme) => {
       set({ theme });
     },

@@ -36,16 +36,23 @@ export const createDoc = async (
 
     await page
       .getByRole('button', {
-        name: 'Create a new document',
+        name: 'New doc',
       })
       .click();
 
-    await page.getByRole('heading', { name: 'Untitled document' }).click();
-    await page.keyboard.type(randomDocs[i], { delay: 100 });
-    await page.getByText('Created at ').click();
+    const input = page.getByRole('textbox', { name: 'doc title input' });
+    await input.click();
+    await input.fill(randomDocs[i]);
+    await input.blur();
   }
 
   return randomDocs;
+};
+
+export const verifyDocName = async (page: Page, docName: string) => {
+  const input = page.getByRole('textbox', { name: 'doc title input' });
+  await expect(input).toBeVisible();
+  await expect(input).toHaveText(docName);
 };
 
 export const addNewMember = async (
@@ -60,7 +67,9 @@ export const addNewMember = async (
       response.status() === 200,
   );
 
-  const inputSearch = page.getByLabel(/Find a member to add to the document/);
+  const inputSearch = page.getByRole('combobox', {
+    name: 'Quick search input',
+  });
 
   // Select a new user
   await inputSearch.fill(fillText);
@@ -75,13 +84,9 @@ export const addNewMember = async (
   await page.getByRole('option', { name: users[index].email }).click();
 
   // Choose a role
-  await page.getByRole('combobox', { name: /Choose a role/ }).click();
-  await page.getByRole('option', { name: role }).click();
-  await page.getByRole('button', { name: 'Validate' }).click();
-
-  await expect(
-    page.getByText(`User ${users[index].email} added to the document.`),
-  ).toBeVisible();
+  await page.getByLabel('doc-role-dropdown').click();
+  await page.getByRole('button', { name: role }).click();
+  await page.getByRole('button', { name: 'Invite' }).click();
 
   return users[index].email;
 };
@@ -97,24 +102,22 @@ export const goToGridDoc = async (
   const header = page.locator('header').first();
   await header.locator('h2').getByText('Docs').click();
 
-  const datagrid = page.getByLabel('Datagrid of the documents page 1');
-  const datagridTable = datagrid.getByRole('table');
+  const docsGrid = page.getByTestId('docs-grid');
+  await expect(docsGrid).toBeVisible();
+  await expect(docsGrid.getByTestId('grid-loader')).toBeHidden();
 
-  await expect(datagrid.getByLabel('Loading data')).toBeHidden({
-    timeout: 10000,
-  });
+  const rows = docsGrid.getByRole('row');
 
-  const rows = datagridTable.getByRole('row');
   const row = title
     ? rows.filter({
         hasText: title,
       })
     : rows.nth(nthRow);
 
-  const docTitleCell = row.getByRole('cell').nth(1);
+  await expect(row).toBeVisible();
 
-  const docTitle = await docTitleCell.textContent();
-
+  const docTitleContent = row.locator('[aria-describedby="doc-title"]').first();
+  const docTitle = await docTitleContent.textContent();
   expect(docTitle).toBeDefined();
 
   await row.getByRole('link').first().click();

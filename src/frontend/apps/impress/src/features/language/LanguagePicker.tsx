@@ -1,4 +1,5 @@
 import { Select } from '@openfun/cunningham-react';
+import { Settings } from 'luxon';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
@@ -26,7 +27,7 @@ const SelectStyled = styled(Select)<{ $isSmall?: boolean }>`
     }
 
     &:hover {
-      box-shadow: var(--c--theme--colors--primary-100) 0 0 0 2px !important;
+      box-shadow: none !important;
     }
   }
 `;
@@ -34,6 +35,7 @@ const SelectStyled = styled(Select)<{ $isSmall?: boolean }>`
 export const LanguagePicker = () => {
   const { t, i18n } = useTranslation();
   const { preload: languages } = i18n.options;
+  Settings.defaultLocale = i18n.language;
 
   const optionsPicker = useMemo(() => {
     return (languages || []).map((lang) => ({
@@ -46,10 +48,16 @@ export const LanguagePicker = () => {
           $gap="0.7rem"
           $align="center"
         >
-          <Text $isMaterialIcon $size="1rem" $theme="primary" $variation="600">
+          <Text
+            $isMaterialIcon
+            $size="1rem"
+            $theme="primary"
+            $weight="bold"
+            $variation="800"
+          >
             translate
           </Text>
-          <Text $theme="primary" $variation="600">
+          <Text $theme="primary" $weight="500" $variation="800">
             {LANGUAGES_ALLOWED[lang]}
           </Text>
         </Box>
